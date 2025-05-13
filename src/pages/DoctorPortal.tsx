@@ -11,6 +11,9 @@ const DoctorPortal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Get doctor name from localStorage
+  const doctorName = localStorage.getItem("userName") || "";
+
   // Check authentication and role
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated') === 'true';
@@ -51,10 +54,16 @@ const DoctorPortal = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <main className="flex-grow pt-12">
+      {/* If you have a fixed Navbar, it should be above this main block */}
+      <main className="flex-grow pt-24"> {/* pt-24 = padding-top: 6rem, ensures nothing overlaps */}
         <div className="container-custom py-8">
+          <div className="mb-12">
+            <h1 className="text-2xl font-bold text-sociodent-700 mb-2">
+              Welcome Dr. {doctorName}
+            </h1>
+          </div>
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Doctor Portal</h1>
+            <h2 className="text-3xl font-bold text-gray-900">Doctor Portal</h2>
             <p className="text-gray-600">Manage your appointments, patients, and consultations</p>
           </div>
           <div className="flex flex-col lg:flex-row gap-6">
@@ -84,7 +93,7 @@ const DoctorPortal = () => {
                 <div>
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-semibold">Today's Appointments</h2>
-                    <button className="button-primary py-2">+ Add Appointment</button>
+                    {/* "+ Add Appointment" button removed */}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">

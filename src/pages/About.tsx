@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -11,15 +11,12 @@ import {
   Clock,
 } from "lucide-react";
 
-const About = () => {
-  const [activeMember, setActiveMember] = useState<string | null>(null);
-
-  const teamMembers = [
-    {
-      name: "Dr. Steward Gracian",
-      role: "Founder & CEO",
-      image: "/doc-img/Steward.png",
-      details: `A General Dentist turned social entrepreneur with over a decade of experience across clinical
+const teamMembers = [
+  {
+    name: "Dr. Steward Gracian",
+    role: "Founder & CEO",
+    image: "/doc-img/Steward.png",
+    details: `A General Dentist turned social entrepreneur with over a decade of experience across clinical
 and non-clinical roles. He is the founder of SocioDent, an early-stage MedTech startup
 focused on dental innovations. With a strong passion for improving oral health awareness and
 accessibility, he has worked extensively in rural public health and social innovation to break
@@ -33,12 +30,12 @@ Under his leadership, SocioDent has received support from several reputed incuba
 including KIIT-TBI, IITM HTIC MedTech Incubator, SIIC IIT Kanpur, and IIHMR Startups. He
 also holds a Postgraduate Diploma in Healthcare Entrepreneurship, providing him with a
 strong foundation in health management.`
-    },
-    {
-      name: "Dr. A. Victor Samuel",
-      role: "Chief Medical Officer",
-      image: "/doc-img/Dr.A.Victor-samuel-MDS.jpg",
-      details: `Experienced Pediatric Dentist with over 15 years of clinical, academic, and research
+  },
+  {
+    name: "Dr. A. Victor Samuel",
+    role: "Chief Medical Officer",
+    image: "/doc-img/Dr.A.Victor-samuel-MDS.jpg",
+    details: `Experienced Pediatric Dentist with over 15 years of clinical, academic, and research
 expertise. He is widely recognized for his contributions to dental innovation, holding 3 patents and authoring over 40 national and international publications. His core interest lies in
 developing assistive technologies that enhance pediatric oral health, particularly for children with special needs.
 
@@ -50,8 +47,60 @@ A former President of the Indian Dental Association – Greater Chennai Branch, 
 has also authored and contributed to a couple of textbooks in pediatric dentistry. His work
 bridges the gap between clinical practice and innovation, aiming to create inclusive and
 impactful dental care solutions for every child.`
-    }
-  ];
+  }
+];
+
+const values = [
+  {
+    icon: <CheckCircle className="h-8 w-8 text-sociodent-600" />,
+    title: "Quality Care",
+    description: "We partner only with qualified, licensed dentists who meet our high standards of care and professionalism."
+  },
+  {
+    icon: <Heart className="h-8 w-8 text-sociodent-600" />,
+    title: "Patient-Centered",
+    description: "Everything we do is designed around patient needs, comfort, and convenience. Your dental health comes first."
+  },
+  {
+    icon: <Award className="h-8 w-8 text-sociodent-600" />,
+    title: "Innovation",
+    description: "We leverage technology to create better dental care experiences, from teledentistry to our digital health records."
+  },
+  {
+    icon: <Users className="h-8 w-8 text-sociodent-600" />,
+    title: "Inclusivity",
+    description: "We believe everyone deserves access to quality dental care regardless of location, income, or schedule."
+  },
+  {
+    icon: <MapPin className="h-8 w-8 text-sociodent-600" />,
+    title: "Accessibility",
+    description: "With virtual, home, and clinic options, we make it easy to get the dental care you need on your terms."
+  },
+  {
+    icon: <Clock className="h-8 w-8 text-sociodent-600" />,
+    title: "Efficiency",
+    description: "We streamline the entire dental care process, from booking appointments to receiving treatment."
+  }
+];
+
+const About = () => {
+  const [activeMember, setActiveMember] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsAuthenticated(localStorage.getItem("isAuthenticated") === "true");
+    };
+
+    checkAuth();
+    window.addEventListener("authChange", checkAuth);
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("authChange", checkAuth);
+      window.removeEventListener("storage", checkAuth);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -60,20 +109,36 @@ impactful dental care solutions for every child.`
         <section className="py-20 bg-gradient-to-b from-sociodent-50 to-white relative overflow-hidden">
           <div className="container-custom relative z-10">
             <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl font-bold text-coral-500 mb-6">
-                Breaking Barriers <span className="text-gray-900">In Oral Healthcare</span>
+              <h1 className="text-4xl md:text-5xl font-bold">
+                <span className="text-coral-500">Breaking Barriers</span>{" "}
+                <span className="text-gray-900">In Oral Healthcare</span>
               </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                We’re on a mission to redefine access to oral healthcare by connecting children,
+              <p className="text-xl text-gray-600 mt-6 mb-8">
+                We're on a mission to redefine access to oral healthcare by connecting children,
                 the elderly, and individuals with special needs to compassionate dental
                 professionals through home visits, virtual consultations, and inclusive dental
                 solutions
               </p>
               <div className="flex flex-wrap justify-center gap-4">
-                <Link to="/consultation" className="button-primary">
-                  Find a Dentist
-                </Link>
-                <Link to="/marketplace" className="button-secondary">
+                {isAuthenticated ? (
+                  <Link 
+                    to="/consultation" 
+                    className="button-primary"
+                  >
+                    Find a Dentist
+                  </Link>
+                ) : (
+                  <Link 
+                    to="/auth?mode=signup" 
+                    className="button-primary"
+                  >
+                    Register Now
+                  </Link>
+                )}
+                <Link 
+                  to="/marketplace" 
+                  className="button-secondary"
+                >
                   Shop Products
                 </Link>
               </div>
@@ -140,7 +205,7 @@ impactful dental care solutions for every child.`
           </div>
         </section>
 
-        {/* Team Section (Minimal, No Border, No Card, Just Info) */}
+        {/* Team Section */}
         <section className="py-20 bg-white">
           <div className="container-custom">
             <div className="text-center max-w-3xl mx-auto mb-16">
@@ -198,38 +263,7 @@ impactful dental care solutions for every child.`
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: <CheckCircle className="h-8 w-8 text-sociodent-600" />,
-                  title: "Quality Care",
-                  description: "We partner only with qualified, licensed dentists who meet our high standards of care and professionalism."
-                },
-                {
-                  icon: <Heart className="h-8 w-8 text-sociodent-600" />,
-                  title: "Patient-Centered",
-                  description: "Everything we do is designed around patient needs, comfort, and convenience. Your dental health comes first."
-                },
-                {
-                  icon: <Award className="h-8 w-8 text-sociodent-600" />,
-                  title: "Innovation",
-                  description: "We leverage technology to create better dental care experiences, from teledentistry to our digital health records."
-                },
-                {
-                  icon: <Users className="h-8 w-8 text-sociodent-600" />,
-                  title: "Inclusivity",
-                  description: "We believe everyone deserves access to quality dental care regardless of location, income, or schedule."
-                },
-                {
-                  icon: <MapPin className="h-8 w-8 text-sociodent-600" />,
-                  title: "Accessibility",
-                  description: "With virtual, home, and clinic options, we make it easy to get the dental care you need on your terms."
-                },
-                {
-                  icon: <Clock className="h-8 w-8 text-sociodent-600" />,
-                  title: "Efficiency",
-                  description: "We streamline the entire dental care process, from booking appointments to receiving treatment."
-                }
-              ].map((value, index) => (
+              {values.map((value, index) => (
                 <div key={index} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                   <div className="w-12 h-12 bg-sociodent-50 rounded-full flex items-center justify-center mb-4">
                     {value.icon}
@@ -299,7 +333,6 @@ impactful dental care solutions for every child.`
                   </div>
                 </div>
               </div>
-              {/* You can add a contact form or illustration here if you wish */}
             </div>
           </div>
         </section>

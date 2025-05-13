@@ -3,24 +3,21 @@ import { Link } from "react-router-dom";
 import HeroSection from "@/components/HeroSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import Testimonials from "@/components/Testimonials";
-import { MapPin, Calendar, Star } from "lucide-react";
 import { featuredDentists } from "@/data/homepageData";
+import { FaStar, FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
 
 const HomePage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check authentication state on component mount
     const checkAuth = () => {
       setIsAuthenticated(localStorage.getItem("isAuthenticated") === "true");
     };
-
     checkAuth();
-
-    // Listen for changes in localStorage (e.g., after login or logout)
+    window.addEventListener("authChange", checkAuth);
     window.addEventListener("storage", checkAuth);
-
     return () => {
+      window.removeEventListener("authChange", checkAuth);
       window.removeEventListener("storage", checkAuth);
     };
   }, []);
@@ -31,7 +28,7 @@ const HomePage = () => {
         <HeroSection />
         <FeaturesSection />
 
-        {/* Featured Dentists */}
+        {/* Meet Our Expert Dentists Section */}
         <section className="py-20 bg-gray-50">
           <div className="container-custom">
             <div className="text-center mb-12">
@@ -61,7 +58,7 @@ const HomePage = () => {
                       loading="lazy"
                     />
                     <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                      <Star className="text-yellow-400 w-4 h-4 mr-1" />
+                      <FaStar className="text-yellow-400 w-4 h-4 mr-1" />
                       <span>{dentist.rating.toFixed(1)}</span>
                       <span className="text-gray-500 text-xs ml-1">
                         ({dentist.reviewCount})
@@ -77,20 +74,28 @@ const HomePage = () => {
                     </p>
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center text-gray-600 text-sm">
-                        <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                        <FaMapMarkerAlt className="w-4 h-4 mr-2 text-gray-400" />
                         <span>{dentist.location}</span>
                       </div>
                       <div className="flex items-center text-gray-600 text-sm">
-                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                        <FaCalendarAlt className="w-4 h-4 mr-2 text-gray-400" />
                         <span>{dentist.availability}</span>
                       </div>
                     </div>
                     <div className="pt-3 border-t border-gray-100">
                       <Link
-                        to={`/consultation?dentist=${dentist.id}`}
-                        className="button-primary w-full py-2 text-center text-sm"
+                        to={
+                          isAuthenticated
+                            ? `/consultation?dentist=${dentist.id}`
+                            : "/auth?mode=login"
+                        }
+                        className={`button-primary w-full py-2 text-center text-sm ${
+                          !isAuthenticated ? "opacity-90" : ""
+                        }`}
                       >
-                        Book Appointment
+                        {isAuthenticated
+                          ? "Book Appointment"
+                          : "Login for Appointment"}
                       </Link>
                     </div>
                   </div>
@@ -103,13 +108,13 @@ const HomePage = () => {
         <Testimonials />
 
         {/* Get Started Section */}
-        <section className="py-20 bg-white">
+        <section className="py-12 bg-gray-50">
           <div className="container-custom">
-            <div className="text-center mb-12">
-              <span className="reveal-on-scroll inline-block px-3 py-1 mb-6 bg-sociodent-100 text-sociodent-700 rounded-full text-sm font-medium">
+            <div className="text-center mb-8">
+              <span className="reveal-on-scroll inline-block px-3 py-1 mb-4 bg-sociodent-100 text-sociodent-700 rounded-full text-sm font-medium">
                 Get Started
               </span>
-              <h2 className="reveal-on-scroll text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              <h2 className="reveal-on-scroll text-3xl md:text-4xl font-bold text-gray-900 mb-2">
                 Ready to Transform Your Smile?
               </h2>
               <p className="reveal-on-scroll text-lg text-gray-600 max-w-2xl mx-auto">
@@ -117,37 +122,25 @@ const HomePage = () => {
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                to="/consultation"
-                className="reveal-on-scroll button-primary bg-sociodent-600 hover:bg-sociodent-700 text-white px-8 py-3 rounded-lg"
-              >
-                Book a Consultation
-              </Link>
-              {!isAuthenticated && (
+              {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/signup"
-                    className="reveal-on-scroll button-secondary bg-white text-sociodent-600 border border-sociodent-600 hover:bg-sociodent-50 px-8 py-3 rounded-lg"
-                    style={{ transitionDelay: "150ms" }}
-                  >
+                  <Link to="/consultation" className="button-primary">
+                    Book a Consultation
+                  </Link>
+                  <Link to="/marketplace" className="button-secondary">
+                    Shop Products
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth" className="button-primary">
                     Create Account
                   </Link>
-                  <Link
-                    to="/auth"
-                    className="reveal-on-scroll button-secondary bg-white text-sociodent-600 border border-sociodent-600 hover:bg-sociodent-50 px-8 py-3 rounded-lg"
-                    style={{ transitionDelay: "200ms" }}
-                  >
+                  <Link to="/auth?mode=login" className="button-secondary">
                     Login
                   </Link>
                 </>
               )}
-              <Link
-                to="/marketplace"
-                className="reveal-on-scroll button-secondary bg-white text-sociodent-600 border border-sociodent-600 hover:bg-sociodent-50 px-8 py-3 rounded-lg"
-                style={{ transitionDelay: "300ms" }}
-              >
-                Shop Products
-              </Link>
             </div>
           </div>
         </section>

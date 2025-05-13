@@ -9,7 +9,7 @@ const MyAppointments = () => {
     email: 'alex.johnson@example.com',
     phone: '+1 (555) 123-4567',
     address: '123 Main St, New York, NY 10001',
-    avatar: '/path/to/avatar.jpg' // Replace with actual avatar path
+    avatar: '/path/to/avatar.jpg', // Replace with actual avatar path
   });
 
   // Mock appointments data - in a real app, this would come from an API
@@ -19,25 +19,25 @@ const MyAppointments = () => {
       doctor: {
         name: 'Dr. Sarah Johnson',
         image: '/doc-img/sarah-johnson.jpg',
-        specialization: 'Virtual Consultation'
+        specialization: 'Virtual Consultation',
       },
       date: '2023-09-15',
       time: '10:30 AM',
       type: 'Regular check-up and cleaning',
-      status: 'confirmed'
+      status: 'confirmed',
     },
     {
       id: 2,
       doctor: {
         name: 'Dr. Michael Chen',
         image: '/doc-img/michael-chen.jpg',
-        specialization: 'Clinic Consultation'
+        specialization: 'Clinic Consultation',
       },
       date: '2023-10-03',
       time: '2:00 PM',
       type: 'Wisdom tooth evaluation',
-      status: 'pending'
-    }
+      status: 'pending',
+    },
   ]);
 
   const navigate = useNavigate();
@@ -46,13 +46,13 @@ const MyAppointments = () => {
     navigate('/edit-profile');
   };
 
-  const handleReschedule = (appointmentId: number) => {
-    // Implement rescheduling logic
+  const handleReschedule = (appointmentId) => {
+    // Rescheduling logic
     console.log('Rescheduling appointment:', appointmentId);
   };
 
-  const handleCancel = (appointmentId: number) => {
-    // Implement cancellation logic
+  const handleCancel = (appointmentId) => {
+    // Cancellation logic
     console.log('Cancelling appointment:', appointmentId);
   };
 
@@ -85,7 +85,6 @@ const MyAppointments = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-xl font-semibold mb-6">Personal Information</h2>
-              
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <User className="w-5 h-5 text-gray-400" />

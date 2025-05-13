@@ -1,23 +1,36 @@
-// src/pages/DoctorLogin.tsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AuthLayout from "@/components/auth/AuthLayout";
 import SubmitButton from "@/components/auth/SubmitButton";
-import FormFooter from "@/components/auth/FormFooter";
 
 const DoctorLogin = () => {
   const [form, setForm] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = e => {
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    // handle doctor login logic
+    // Simulate doctor login logic
+    if (form.email && form.password) {
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userRole", "doctor");
+      localStorage.setItem("userName", "Dr. John Doe");
+      window.dispatchEvent(new Event("authChange"));
+      navigate("/doctor-portal");
+    } else {
+      alert("Please enter both email and password.");
+    }
   };
 
   return (
     <AuthLayout title="Doctor Login">
       <form onSubmit={handleSubmit}>
         <div className="mb-5">
-          <label className="block text-gray-700 mb-2 text-sm font-medium">Email</label>
+          <label className="block text-gray-700 mb-2 text-sm font-medium">
+            Email
+          </label>
           <input
             name="email"
             type="email"
@@ -28,7 +41,9 @@ const DoctorLogin = () => {
           />
         </div>
         <div className="mb-8">
-          <label className="block text-gray-700 mb-2 text-sm font-medium">Password</label>
+          <label className="block text-gray-700 mb-2 text-sm font-medium">
+            Password
+          </label>
           <input
             name="password"
             type="password"
@@ -40,7 +55,16 @@ const DoctorLogin = () => {
         </div>
         <SubmitButton type="submit">Login</SubmitButton>
       </form>
-      <FormFooter mode="login" role="doctor" />
+      <div className="mt-4 text-center text-gray-500 text-sm">
+        Don't have an account?{" "}
+        <button
+          className="text-blue-600 hover:underline font-medium"
+          onClick={() => navigate("/signup?role=doctor")}
+          type="button"
+        >
+          Sign up
+        </button>
+      </div>
     </AuthLayout>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 const disabilities = [
+  "No Disability",
   "Physical Disability",
   "Intellectual Disability",
   "Others"

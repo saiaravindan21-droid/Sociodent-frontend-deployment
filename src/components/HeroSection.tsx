@@ -1,7 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const HeroSection = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check authentication state on mount
+    const checkAuth = () => {
+      setIsAuthenticated(localStorage.getItem("isAuthenticated") === "true");
+    };
+
+    checkAuth();
+
+    // Listen for authentication changes
+    window.addEventListener("authChange", checkAuth);
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("authChange", checkAuth);
+      window.removeEventListener("storage", checkAuth);
+    };
+  }, []);
+
   return (
     <section 
       className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-white to-sociodent-50 overflow-hidden"
@@ -33,12 +53,37 @@ const HeroSection = () => {
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link to="/consultation" className="button-primary text-center">
-              Find a Dentist
-            </Link>
-            <Link to="/auth?mode=signup" className="button-secondary text-center">
-              Create Account
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link 
+                  to="/consultation" 
+                  className="button-primary text-center"
+                >
+                  Find a Dentist
+                </Link>
+                <Link 
+                  to="/marketplace" 
+                  className="button-secondary text-center"
+                >
+                  Shop Products
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/auth?mode=signup" 
+                  className="button-primary text-center"
+                >
+                  Create Account
+                </Link>
+                <Link 
+                  to="/auth?mode=login" 
+                  className="button-secondary text-center"
+                >
+                  Login
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -13,14 +13,14 @@ import {
 import AuthLayout from "@/components/auth/AuthLayout";
 import SubmitButton from "@/components/auth/SubmitButton";
 
-const generateCaptcha = () => {
+const generateCaptcha = (): string => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 6 }, () =>
     chars[Math.floor(Math.random() * chars.length)]
   ).join("");
 };
 
-const Auth = () => {
+const Auth: React.FC = () => {
   const [loginTab, setLoginTab] = useState<"user" | "doctor" | "admin">("user");
   const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [form, setForm] = useState({
@@ -35,8 +35,9 @@ const Auth = () => {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleCaptchaRefresh = () => {
     setCaptcha(generateCaptcha());
@@ -45,17 +46,23 @@ const Auth = () => {
   };
 
   const handleCaptchaVerify = () => {
-    setCaptchaVerified(captchaInput.trim() === captcha.trim()); // Case-sensitive
+    if (captchaInput.trim() === captcha.trim()) {
+      setCaptchaVerified(true);
+    } else {
+      alert("Captcha verification failed. Please try again.");
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!captchaVerified) return alert("Please verify the captcha!");
+    if (!captchaVerified) {
+      alert("Please verify the captcha before signing in.");
+      return;
+    }
 
     const role = loginTab;
     const userName =
-      form.name ||
-      (loginMethod === "email"
+      form.name || (loginMethod === "email"
         ? form.email.split("@")[0]
         : form.phone);
 
@@ -64,7 +71,6 @@ const Auth = () => {
     localStorage.setItem("userName", userName);
 
     window.dispatchEvent(new Event("authChange"));
-
     navigate("/");
   };
 
@@ -77,6 +83,7 @@ const Auth = () => {
         </p>
       </div>
 
+      {/* Role selection */}
       <div className="flex justify-center mb-4 space-x-2">
         {["user", "doctor", "admin"].map((role) => (
           <button
@@ -96,6 +103,7 @@ const Auth = () => {
         ))}
       </div>
 
+      {/* Email/Phone toggle */}
       <div className="flex mb-4">
         {["email", "phone"].map((method) => (
           <button
@@ -112,8 +120,10 @@ const Auth = () => {
         ))}
       </div>
 
+      {/* Login Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* User Name */}
+
+        {/* Name Input */}
         <div>
           <label className="block text-gray-700 mb-2 text-sm font-medium">
             User Name
@@ -134,7 +144,7 @@ const Auth = () => {
           </div>
         </div>
 
-        {/* Email */}
+        {/* Email Input */}
         {loginMethod === "email" && (
           <div>
             <label className="block text-gray-700 mb-2 text-sm font-medium">
@@ -157,7 +167,7 @@ const Auth = () => {
           </div>
         )}
 
-        {/* Phone */}
+        {/* Phone Input */}
         {loginMethod === "phone" && (
           <div>
             <label className="block text-gray-700 mb-2 text-sm font-medium">
@@ -180,7 +190,7 @@ const Auth = () => {
           </div>
         )}
 
-        {/* Password */}
+        {/* Password Input */}
         <div>
           <div className="flex justify-between items-center mb-1">
             <label className="block text-gray-700 text-sm font-medium">
@@ -202,7 +212,7 @@ const Auth = () => {
             />
             <span
               className="absolute right-3 top-3 text-gray-400 cursor-pointer"
-              onClick={() => setShowPassword((s) => !s)}
+              onClick={() => setShowPassword((prev) => !prev)}
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </span>
@@ -251,6 +261,7 @@ const Auth = () => {
           </div>
         </div>
 
+        {/* Submit */}
         <SubmitButton
           type="submit"
           className={`w-full py-3 mt-2 rounded-full text-white font-bold text-lg ${
@@ -263,6 +274,19 @@ const Auth = () => {
         >
           Sign In as {loginTab.charAt(0).toUpperCase() + loginTab.slice(1)}
         </SubmitButton>
+
+        {/* Sign Up Prompt */}
+        <div className="text-center mt-3">
+          <p className="text-sm text-gray-600">
+            Don’t have an account?{" "}
+            <a
+              href="/signup"
+              className="text-sociodent-500 font-medium hover:underline"
+            >
+              Sign Up
+            </a>
+          </p>
+        </div>
       </form>
     </AuthLayout>
   );

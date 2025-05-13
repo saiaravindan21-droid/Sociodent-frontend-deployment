@@ -8,7 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Page imports
 import HomePage from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
-import Auth from "@/pages/Auth"; // Your login page
+import Auth from "@/pages/Auth";
 import Consultation from "@/pages/Consultation";
 import Marketplace from "@/pages/Marketplace";
 import ProductDetails from "@/pages/ProductDetails";
@@ -17,8 +17,7 @@ import Dashboard from "@/pages/Dashboard";
 import About from "@/pages/About";
 import DoctorPortal from "@/pages/DoctorPortal";
 import AdminPortal from "@/pages/AdminPortal";
-import Profile from "@/pages/Profile";
-
+import MyProfile from "@/pages/MyProfile"; // ✅ Correct import
 // Component imports
 import WhatsAppBubble from "@/components/WhatsAppBubble";
 import Footer from "@/components/Footer";
@@ -26,7 +25,7 @@ import Navbar from "@/components/Navbar";
 import DoctorAppointmentForm from "@/components/DoctorAppointmentForm";
 import ContactDetails from "@/components/ContactDetails";
 
-// Onboarding (multi-step signup)
+// Onboarding
 import Onboarding from "@/pages/onboarding/Onboarding";
 
 const queryClient = new QueryClient({
@@ -52,7 +51,7 @@ const App: React.FC = () => (
           <Route path="/" element={<HomePage />} />
           <Route path="/signup" element={<Onboarding />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/my-profile" element={<MyProfile />} /> {/* ✅ My Profile route */}
           <Route path="/consultation" element={<Consultation />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/marketplace/:productId" element={<ProductDetails />} />

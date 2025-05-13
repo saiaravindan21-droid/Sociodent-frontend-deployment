@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 const conditionsList = [
+   "None/Nothing",
   "Diabetes",
   "Hypertension",
   "Blood Disorders",

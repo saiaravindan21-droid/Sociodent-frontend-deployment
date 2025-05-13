@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 
 const categories = [
+  
   "Dependent Elderly",
   "Child with Disability",
   "Adult with Disability",
   "Hospitalized/Bedridden Individual",
   "Parent/Caregivers of Dependent Individuals",
-  "Individual Without Known Disability (Adult/Child)"
+  "Individual Without Disability (Adult/Child)"
 ];
 
 const StepCategory = ({ data, updateData, nextStep, prevStep }) => {
