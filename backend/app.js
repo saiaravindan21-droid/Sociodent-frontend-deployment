@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import razorpayRoutes from './routes/razorpay.js';
-
+import { HashRouter as Router } from 'react-router-dom';
 const app = express();
 
 // Middleware
