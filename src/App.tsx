@@ -10,10 +10,8 @@ import { Loading } from "@/components/Loading";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WhatsAppBubble from "@/components/WhatsAppBubble";
-
-// Lazy load components
-const DoctorAppointmentForm = lazy(() => import("@/components/DoctorAppointmentForm"));
-const ContactDetails = lazy(() => import("@/components/ContactDetails"));
+import DoctorAppointmentForm from "@/components/DoctorAppointmentForm";
+import ContactDetails from "@/components/ContactDetails";
 
 // Lazy load pages
 const HomePage = lazy(() => import("@/pages/Index"));
@@ -40,17 +38,17 @@ const queryClient = new QueryClient({
 });
 
 const getBasename = () =>
-  process.env.NODE_ENV === "production" ? "/Sociodent-frontend-deployment/" : "/";
+  process.env.NODE_ENV === "production" ? "/Sociodent-frontend-deployment" : "/";
 
 const App: React.FC = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter basename={getBasename()}>
-          <Navbar />
-          <Toaster />
-          <Sonner />
           <Suspense fallback={<Loading />}>
+            <Navbar />
+            <Toaster />
+            <Sonner />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/signup" element={<Onboarding />} />
@@ -68,10 +66,10 @@ const App: React.FC = () => (
               <Route path="/contact" element={<ContactDetails />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <WhatsAppBubble />
+            <Footer />
+            {process.env.NODE_ENV === 'development' && <DevLogger />}
           </Suspense>
-          <Footer />
-          <WhatsAppBubble />
-          {process.env.NODE_ENV === 'development' && <DevLogger />}
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
