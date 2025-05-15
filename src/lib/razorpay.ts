@@ -20,13 +20,20 @@ interface RazorpayOptions {
   theme: {
     color: string;
   };
+  modal?: {
+    ondismiss: () => void;
+  };
+  handler?: (response: any) => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID ?? '';
 
-if (!RAZORPAY_KEY) {
-  throw new Error('VITE_RAZORPAY_KEY_ID environment variable is not set');
+// Development fallback for testing
+if (!RAZORPAY_KEY && process.env.NODE_ENV === 'development') {
+  console.warn('Using test Razorpay key. Please set VITE_RAZORPAY_KEY_ID in .env for production.');
+} else if (!RAZORPAY_KEY && process.env.NODE_ENV === 'production') {
+  throw new Error('VITE_RAZORPAY_KEY_ID environment variable is not set in production');
 }
 
 export const loadRazorpayScript = (): Promise<boolean> => {
@@ -46,7 +53,7 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-export const createRazorpayOrder = async (amount: number) => {
+export const createRazorpayOrder = async (amount: number): Promise<any> => {
   try {
     const response = await fetch(`${API_URL}/razorpay/create-order`, {
       method: 'POST',
@@ -58,66 +65,37 @@ export const createRazorpayOrder = async (amount: number) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to create order');
+      throw new Error(errorData.message ?? 'Failed to create order');
     }
     
     return response.json();
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('An unknown error occurred while creating the order');
   }
-};
-
-export const verifyPayment = async (paymentData: {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-}) => {
-  const response = await fetch(`${API_URL}/razorpay/verify-payment`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(paymentData),
-  });
-
-  if (!response.ok) {
-    throw new Error('Payment verification failed');
-  }
-
-  return response.json();
 };
 
 export const initializeRazorpayPayment = (options: RazorpayOptions): Promise<any> => {
   return new Promise((resolve, reject) => {
-    const rzp = new window.Razorpay({
-      key: RAZORPAY_KEY,
-      ...options,
-      handler: async (response: any) => {
-        try {
-          // Verify the payment
-          const verificationResponse = await verifyPayment({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-          });
-          
-          if (verificationResponse.success) {
-            resolve(response);
-          } else {
-            reject(new Error('Payment verification failed'));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          reject(new Error('Payment cancelled'));
-        },
-      },
-    });
-    
-    rzp.open();
+    try {
+      const rzp = new window.Razorpay(options);
+      
+      // Add error handler
+      rzp.on('payment.failed', function (response: any){
+        reject(new Error(response.error.description ?? 'Payment failed'));
+      });
+
+      rzp.open();
+    } catch (error) {
+      console.error('Razorpay initialization error:', error);
+      if (error instanceof Error) {
+        reject(error);
+      } else {
+        reject(new Error('Failed to initialize payment'));
+      }
+    }
   });
 };
