@@ -22,17 +22,13 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    sourcemap: process.env.NODE_ENV === "development",
+    assetsDir: "assets",
     rollupOptions: {
       output: {
         manualChunks: {
           "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "ui-components": ["@radix-ui/react-tooltip", "@radix-ui/react-toast"],
         },
       },
     },
-  },
-  optimizeDeps: {
-    include: ["react", "react-dom", "react-router-dom"],
   },
 });
