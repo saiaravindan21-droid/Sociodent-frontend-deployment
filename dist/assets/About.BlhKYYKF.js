@@ -1,4 +1,4 @@
-import{r as a,j as e,B as i,aJ as l,J as r,K as m,N as x,a5 as o,aH as u,au as p,aK as g}from"./react-vendor-DsHVXrKi.js";import"./vendor-B5cR7mE1.js";const f=[{name:"Dr. Steward Gracian",role:"Founder & CEO",image:"/doc-img/Steward.png",details:`A General Dentist turned social entrepreneur with over a decade of experience across clinical
+import{r as a,j as e,B as i,aJ as l,J as r,K as m,N as x,a5 as o,aH as u,au as p,aK as g}from"./react-vendor.BBJia3te.js";import"./vendor.Df8FfzQY.js";const f=[{name:"Dr. Steward Gracian",role:"Founder & CEO",image:"/doc-img/Steward.png",details:`A General Dentist turned social entrepreneur with over a decade of experience across clinical
 and non-clinical roles. He is the founder of SocioDent, an early-stage MedTech startup
 focused on dental innovations. With a strong passion for improving oral health awareness and
 accessibility, he has worked extensively in rural public health and social innovation to break
