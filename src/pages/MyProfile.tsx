@@ -10,8 +10,17 @@ import {
   FaLock,
   FaCheck,
   FaTimes,
+  FaExclamationTriangle,
+  FaFilePdf,
+  FaFileImage,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { auth, db, storage } from "@/firebase";
+import { onAuthStateChanged, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { ref, onValue, update, get } from "firebase/database";
+import { ref as storageRef, getDownloadURL, listAll, uploadBytes, deleteObject, getMetadata } from "firebase/storage";
+import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from 'uuid';
 
 // Sidebar item component
 const SidebarItem = ({ icon, label, active, onClick }) => (
@@ -19,31 +28,14 @@ const SidebarItem = ({ icon, label, active, onClick }) => (
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer mb-1 transition ${
       active
-        ? "bg-[#e6f0fa] text-[#0e5d9f] font-semibold"
+        ? "bg-[#e6f0fa] text-[#1164A8] font-semibold"
         : "hover:bg-gray-100 text-gray-700"
     }`}
   >
-    <span className={`text-lg ${active ? "text-[#0e5d9f]" : ""}`}>{icon}</span>
+    <span className={`text-lg ${active ? "text-[#1164A8]" : ""}`}>{icon}</span>
     <span>{label}</span>
   </div>
 );
-
-const mockAppointments = [
-  {
-    id: 1,
-    time: "10:00 AM",
-    date: "2025-06-01",
-    type: "Check-up",
-    status: "confirmed",
-  },
-  {
-    id: 2,
-    time: "2:00 PM",
-    date: "2025-06-03",
-    type: "Cleaning",
-    status: "pending",
-  },
-];
 
 const statusColors = {
   confirmed: "bg-green-100 text-green-800",
@@ -70,6 +62,7 @@ const initialProfile = {
 const MyProfile = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState("");
+  const [userId, setUserId] = useState("");
   const [profile, setProfile] = useState(initialProfile);
   const [activeTab, setActiveTab] = useState("appointments");
   const [isEditing, setIsEditing] = useState(false);
@@ -80,29 +73,147 @@ const MyProfile = () => {
   const [passwordError, setPasswordError] = useState("");
   const [profileError, setProfileError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [appointments, setAppointments] = useState([]);
+  const [medicalRecords, setMedicalRecords] = useState<{
+    name: string, 
+    url: string,
+    type?: string,
+    category?: string,
+    uploadDate?: string
+  }[]>([]);
+
   const navigate = useNavigate();
+  const toast = useToast ? useToast() : { toast: (msg) => alert(msg.description) };
 
-  useEffect(() => {
-    const authStatus = localStorage.getItem("isAuthenticated") === "true";
-    const role = localStorage.getItem("userRole") || "";
-    setIsAuthenticated(authStatus);
-    setUserRole(role);
-
-    if (!authStatus || role !== "user") {
-      navigate("/login", { replace: true });
+  // Fetch medical records from Firebase Storage
+  const fetchMedicalRecords = async (userId: string) => {
+    try {
+      const recordsRef = storageRef(storage, `users/${userId}/medicalRecords`);
+      const result = await listAll(recordsRef);
+      
+      const records = await Promise.all(
+        result.items.map(async (itemRef) => {
+          const url = await getDownloadURL(itemRef);
+          const metadata = await getMetadata(itemRef);
+          return {
+            name: itemRef.name,
+            url,
+            type: metadata.contentType,
+            category: 'document',
+            uploadDate: new Date(metadata.timeCreated).toLocaleDateString()
+          };
+        })
+      );
+      
+      setMedicalRecords(records);
+    } catch (error) {
+      console.error("Error fetching medical records:", error);
     }
+  };
 
-    const userProfile =
-      JSON.parse(localStorage.getItem("userProfile") || "{}") || {};
-    setProfile({ ...initialProfile, ...userProfile });
+  // Check authentication status and fetch user data
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        setUserId(user.uid);
+        
+        // First, try to get user info from database
+        const userRef = ref(db, `users/${user.uid}`);
+        
+        get(userRef).then((snapshot) => {
+          if (snapshot.exists()) {
+            // Found user data
+            const userData = snapshot.val();
+            setUserRole(userData.role || "user");
+            
+            // Update profile with user data
+            setProfile({
+              ...initialProfile,
+              fullName: userData.fullName || "",
+              email: userData.email || user.email || "",
+              phone: userData.phone || "",
+              gender: userData.gender || "",
+              city: userData.city || "",
+              state: userData.state || "",
+              pincode: userData.pincode || "",
+              age: userData.age || "",
+              disabilityType: userData.disabilityType || "",
+              category: userData.category || "",
+              medicalConditions: userData.medicalConditions || "",
+              medications: userData.medications || "",
+              modeOfCare: userData.modeOfCare || "",
+            });
+            
+            console.log("User profile loaded from database", userData);
+          } else {
+            console.log("No user data in database, creating initial profile");
+            // No user data, create initial profile with auth data
+            setUserRole("user");
+            setProfile({
+              ...initialProfile,
+              fullName: user.displayName || "",
+              email: user.email || "",
+            });
+            
+            // Store initial profile in database
+            update(userRef, {
+              fullName: user.displayName || "",
+              email: user.email || "",
+              role: "user",
+              registeredAt: new Date().toISOString(),
+            });
+          }
+          
+          setLoading(false);
+        }).catch((error) => {
+          console.error("Error fetching user data:", error);
+          setLoading(false);
+          
+          // Use auth data as fallback
+          setUserRole("user");
+          setProfile({
+            ...initialProfile,
+            fullName: user.displayName || "",
+            email: user.email || "",
+          });
+        });
+        
+        // Fetch user's appointments if they exist
+        const appointmentsRef = ref(db, `appointments/${user.uid}`);
+        get(appointmentsRef).then((snapshot) => {
+          if (snapshot.exists()) {
+            const apptData = snapshot.val();
+            const apptArray = Object.keys(apptData).map(key => ({
+              id: key,
+              ...apptData[key]
+            }));
+            setAppointments(apptArray);
+          }
+        }).catch(err => console.error("Error fetching appointments:", err));
+        
+        // Fetch medical records
+        fetchMedicalRecords(user.uid);
+        
+      } else {
+        setIsAuthenticated(false);
+        setLoading(false);
+        navigate("/auth?mode=login", { replace: true });
+      }
+    });
+
+    return () => unsubscribe();
   }, [navigate]);
 
+  // Handle profile change
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  const saveProfileChanges = () => {
+  // Save profile changes to Firebase
+  const saveProfileChanges = async () => {
     setProfileError("");
     setSuccessMessage("");
 
@@ -112,16 +223,40 @@ const MyProfile = () => {
       return;
     }
 
-    // Update in localStorage
-    localStorage.setItem("userProfile", JSON.stringify(profile));
-    localStorage.setItem("userName", profile.fullName);
-
-    setSuccessMessage("Profile updated successfully!");
-    setIsEditing(false);
-    window.dispatchEvent(new Event("authChange"));
+    try {
+      setLoading(true);
+      
+      // Update in Firebase
+      const userRef = ref(db, `users/${userId}`);
+      await update(userRef, {
+        ...profile,
+        updatedAt: new Date().toISOString()
+      });
+      
+      setSuccessMessage("Profile updated successfully!");
+      setIsEditing(false);
+      
+      toast.toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      setProfileError("Failed to update profile. Please try again.");
+      
+      toast.toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordChange = () => {
+  // Handle password change
+  const handlePasswordChange = async () => {
     setPasswordError("");
     setSuccessMessage("");
 
@@ -140,18 +275,56 @@ const MyProfile = () => {
       return;
     }
 
-    // In a real app, you would verify current password with the server
-    // and then update the password if verification succeeds
-    // For this demo, we'll just simulate success
-
-    setSuccessMessage("Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setShowChangePassword(false);
+    try {
+      setLoading(true);
+      
+      // Reauthenticate first
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      // Then update password
+      await updatePassword(user, newPassword);
+      
+      setSuccessMessage("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowChangePassword(false);
+      
+      toast.toast({
+        title: "Success",
+        description: "Password changed successfully!",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      
+      if (error.code === "auth/wrong-password") {
+        setPasswordError("Current password is incorrect");
+      } else {
+        setPasswordError("Failed to change password. Please try again.");
+      }
+      
+      toast.toast({
+        title: "Error",
+        description: "Failed to change password",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!isAuthenticated || userRole !== "user") {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f7fafd] pt-24 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#1164A8]"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return null;
   }
 
@@ -160,8 +333,9 @@ const MyProfile = () => {
       <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row gap-8">
         {/* Sidebar */}
         <aside className="w-full md:w-64 bg-white rounded-xl shadow-sm p-6 flex flex-col mb-8 md:mb-0">
-          <div className="mb-6 text-xl font-bold flex items-center gap-2 text-[#0e5d9f]">
-            <FaUser className="text-[#0e5d9f]" /> Dashboard
+          <div className="mb-6 text-xl font-bold flex items-center gap-2 text-[#1164A8]">
+            <FaUser className="text-[#1164A8]" />
+            Dashboard
           </div>
           <SidebarItem
             icon={<FaCalendarAlt />}
@@ -200,7 +374,7 @@ const MyProfile = () => {
           {/* Welcome Card */}
           <div className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-5">
             <div>
-              <h1 className="text-2xl font-bold mb-1 text-[#0e5d9f]">
+              <h1 className="text-2xl font-bold mb-1 text-[#1164A8]">
                 Welcome, {profile.fullName || "User"}
               </h1>
               <div className="text-gray-600">{profile.email}</div>
@@ -211,7 +385,7 @@ const MyProfile = () => {
           <div className="bg-white rounded-xl shadow-sm p-6">
             {activeTab === "appointments" && (
               <>
-                <h2 className="text-xl font-semibold mb-4 text-[#0e5d9f]">
+                <h2 className="text-xl font-semibold mb-4 text-[#1164A8]">
                   Your Appointments
                 </h2>
                 <div className="overflow-x-auto">
@@ -236,7 +410,7 @@ const MyProfile = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockAppointments.map((a) => (
+                      {appointments.map((a) => (
                         <tr key={a.id} className="border-b">
                           <td className="px-4 py-4">{a.time}</td>
                           <td className="px-4 py-4">{a.date}</td>
@@ -252,7 +426,7 @@ const MyProfile = () => {
                             </span>
                           </td>
                           <td className="px-4 py-4">
-                            <button className="text-[#0e5d9f] hover:underline mr-2">
+                            <button className="text-[#1164A8] hover:underline mr-2">
                               View
                             </button>
                             <button className="text-red-600 hover:underline">
@@ -261,7 +435,7 @@ const MyProfile = () => {
                           </td>
                         </tr>
                       ))}
-                      {mockAppointments.length === 0 && (
+                      {appointments.length === 0 && (
                         <tr>
                           <td
                             colSpan={5}
@@ -277,17 +451,149 @@ const MyProfile = () => {
               </>
             )}
 
+            {activeTab === "medical" && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 text-[#1164A8]">
+                  Medical Records
+                </h2>
+                
+                <div className="mb-4">
+                  <button
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                    className="px-4 py-2 bg-[#1164A8] text-white rounded hover:bg-[#0e5395] mb-4"
+                  >
+                    Upload New Document
+                  </button>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        try {
+                          const file = e.target.files[0];
+                          const fileRef = storageRef(storage, `users/${userId}/medicalRecords/${file.name}`);
+                          
+                          // Upload the file
+                          await uploadBytes(fileRef, file);
+                          
+                          // Get the download URL
+                          const url = await getDownloadURL(fileRef);
+                          
+                          // Update state with the new record
+                          setMedicalRecords([...medicalRecords, {
+                            name: file.name,
+                            url,
+                            type: file.type,
+                            category: 'document',
+                            uploadDate: new Date().toLocaleDateString()
+                          }]);
+
+                          toast.toast({
+                            title: "Success",
+                            description: "Document uploaded successfully!",
+                            variant: "default",
+                          });
+                        } catch (error) {
+                          toast.toast({
+                            title: "Error",
+                            description: "Failed to upload document",
+                            variant: "destructive",
+                          });
+                          console.error("Upload error:", error);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                
+                {medicalRecords.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {medicalRecords.map((record, index) => (
+                      <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-2">
+                          {record.type?.includes('pdf') || record.name.endsWith('.pdf') ? (
+                            <FaFilePdf className="text-red-500 text-xl" />
+                          ) : (
+                            <FaFileImage className="text-blue-500 text-xl" />
+                          )}
+                          <div>
+                            <div className="font-medium truncate">{record.name}</div>
+                            {record.uploadDate && (
+                              <div className="text-xs text-gray-500">Uploaded: {record.uploadDate}</div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {record.category && (
+                          <div className="mb-2">
+                            <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">
+                              {record.category.charAt(0).toUpperCase() + record.category.slice(1)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2">
+                          <a 
+                            href={record.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[#1164A8] hover:underline text-sm"
+                          >
+                            View
+                          </a>
+                          <button 
+                            onClick={async () => {
+                              try {
+                                // Delete from Firebase Storage
+                                const fileRef = storageRef(storage, `users/${userId}/medicalRecords/${record.name}`);
+                                await deleteObject(fileRef);
+                                
+                                // Update state
+                                setMedicalRecords(medicalRecords.filter((_, i) => i !== index));
+
+                                toast.toast({
+                                  title: "Success",
+                                  description: "Document deleted successfully!",
+                                  variant: "default",
+                                });
+                              } catch (error) {
+                                toast.toast({
+                                  title: "Error",
+                                  description: "Failed to delete document",
+                                  variant: "destructive",
+                                });
+                                console.error("Delete error:", error);
+                              }
+                            }}
+                            className="text-red-600 hover:underline text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500">
+                    No medical records found.
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === "profile" && (
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-[#0e5d9f]">
+                  <h2 className="text-xl font-semibold text-[#1164A8]">
                     Profile Information
                   </h2>
                   {!isEditing && !showChangePassword && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-2 px-3 py-1 bg-[#0e5d9f] text-white rounded hover:bg-[#0c4d84]"
+                        className="flex items-center gap-2 px-3 py-1 bg-[#1164A8] text-white rounded hover:bg-[#0e5395]"
                       >
                         <FaEdit /> Edit Profile
                       </button>
@@ -514,9 +820,15 @@ const MyProfile = () => {
                         <button
                           type="button"
                           onClick={saveProfileChanges}
-                          className="px-4 py-2 bg-[#0e5d9f] text-white rounded hover:bg-[#0c4d84] flex items-center gap-2"
+                          className="px-4 py-2 bg-[#1164A8] text-white rounded hover:bg-[#0e5395] flex items-center gap-2"
+                          disabled={loading}
                         >
-                          <FaCheck /> Save Changes
+                          {loading ? (
+                            <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                          ) : (
+                            <FaCheck />
+                          )}
+                          Save Changes
                         </button>
                       </div>
                     </form>
@@ -581,9 +893,15 @@ const MyProfile = () => {
                         <button
                           type="button"
                           onClick={handlePasswordChange}
-                          className="px-4 py-2 bg-[#0e5d9f] text-white rounded hover:bg-[#0c4d84] flex items-center gap-2"
+                          className="px-4 py-2 bg-[#1164A8] text-white rounded hover:bg-[#0e5395] flex items-center gap-2"
+                          disabled={loading}
                         >
-                          <FaCheck /> Change Password
+                          {loading ? (
+                            <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                          ) : (
+                            <FaCheck />
+                          )}
+                          Change Password
                         </button>
                       </div>
                     </form>
@@ -595,11 +913,6 @@ const MyProfile = () => {
             {activeTab === "history" && (
               <div className="text-gray-500">
                 Appointment history coming soon...
-              </div>
-            )}
-            {activeTab === "medical" && (
-              <div className="text-gray-500">
-                Medical records coming soon...
               </div>
             )}
             {activeTab === "prescriptions" && (

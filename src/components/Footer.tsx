@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Linkedin,
@@ -10,11 +10,16 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Example AuthContext (replace with your actual context or logic)
+const AuthContext = React.createContext({ isLoggedIn: false });
+const useAuth = () => useContext(AuthContext);
+
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
 const Footer = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isLoggedIn } = useAuth();
 
   const handleContactClick = () => {
     if (location.pathname === "/about") {
@@ -26,6 +31,14 @@ const Footer = () => {
       }, 200);
     }
   };
+
+  // Conditionally include "Find a Dentist"
+  const quickLinks = [
+    { label: "Home", path: "/" },
+    ...(isLoggedIn ? [{ label: "Find a Dentist", path: "/consultation" }] : []),
+    { label: "Marketplace", path: "/marketplace" },
+    { label: "About Us", path: "/about" },
+  ];
 
   return (
     <footer className="bg-white border-t border-gray-100">
@@ -51,12 +64,7 @@ const Footer = () => {
               Quick Links
             </h3>
             <ul className="space-y-3">
-              {[
-                { label: "Home", path: "/" },
-                { label: "Find a Dentist", path: "/consultation" },
-                { label: "Marketplace", path: "/marketplace" },
-                { label: "About Us", path: "/about" },
-              ].map((item) => (
+              {quickLinks.map((item) => (
                 <li key={item.path}>
                   <Link
                     to={item.path}
@@ -163,18 +171,25 @@ const Footer = () => {
           </p>
           <div className="mt-2 md:mt-0 flex justify-center md:justify-end space-x-8">
             <Link
-              to="/privacy"
+              to="/privacy-policy"
               onClick={scrollToTop}
               className="text-base px-2 py-1 rounded hover:bg-gray-100"
             >
               Privacy Policy
             </Link>
             <Link
-              to="/terms"
+              to="/terms-and-conditions"
               onClick={scrollToTop}
               className="text-base px-2 py-1 rounded hover:bg-gray-100"
             >
               Terms of Service
+            </Link>
+            <Link
+              to="/cancellation-refund-policy"
+              onClick={scrollToTop}
+              className="text-base px-2 py-1 rounded hover:bg-gray-100"
+            >
+              Cancellation & Refund Policy
             </Link>
           </div>
         </div>

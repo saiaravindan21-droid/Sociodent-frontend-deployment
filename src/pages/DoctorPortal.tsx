@@ -3,24 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Users, MessageSquare, FileText, Settings, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const DoctorPortal = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState('');
   const [activeTab, setActiveTab] = useState('appointments');
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Get doctor name from localStorage
-  const doctorName = localStorage.getItem("userName") || "";
+  const { user, isLoading } = useAuth();
 
   // Check authentication and role
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAuthenticated') === 'true';
-    const role = localStorage.getItem('userRole') || '';
-    setIsAuthenticated(authStatus);
-    setUserRole(role);
-    if (!authStatus || role !== 'doctor') {
+    if (!isLoading && (!user || user.role !== 'doctor')) {
       toast({
         title: "Access Denied",
         description: "You must be logged in as a doctor to access this page",
@@ -28,9 +21,16 @@ const DoctorPortal = () => {
       });
       navigate('/auth?mode=login&role=doctor', { replace: true });
     }
-  }, [navigate, toast]);
+  }, [user, isLoading, navigate, toast]);
 
-  if (!isAuthenticated || userRole !== 'doctor') {
+  // Show loading state or return null if not authenticated
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>;
+  }
+  
+  if (!user || user.role !== 'doctor') {
     return null;
   }
 
@@ -51,6 +51,9 @@ const DoctorPortal = () => {
     { id: 4, patient: 'David Wilson', time: '3:30 PM', date: 'Today', type: 'Cleaning', status: 'confirmed' },
     { id: 5, patient: 'Lisa Thompson', time: '9:30 AM', date: 'Tomorrow', type: 'Check-up', status: 'confirmed' }
   ];
+
+  // Get doctor name from auth context
+  const doctorName = user?.name || "Doctor";
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

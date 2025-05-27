@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, LogOut, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import {
   Sheet,
   SheetContent,
@@ -19,30 +20,11 @@ import {
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState("");
   const [scrolled, setScrolled] = useState(false);
-
+  const { user, logout, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-
-  const userName = localStorage.getItem("userName") || "User";
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const auth = localStorage.getItem("isAuthenticated") === "true";
-      const role = localStorage.getItem("userRole") || "user";
-      setIsAuthenticated(auth);
-      setUserRole(role);
-    };
-
-    checkAuth();
-    window.addEventListener("authChange", checkAuth);
-    return () => {
-      window.removeEventListener("authChange", checkAuth);
-    };
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -51,10 +33,7 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.clear();
-    setIsAuthenticated(false);
-    setUserRole("");
-    window.dispatchEvent(new Event("authChange"));
+    logout();
     toast({
       title: "Logged Out",
       description: "You have been logged out successfully",
@@ -70,12 +49,12 @@ const Navbar = () => {
 
   const userLinks = [{ name: "Find Dentist", path: "/consultation" }];
   const doctorLinks = [{ name: "My Appointments", path: "/doctor-portal" }];
-  const adminLinks = [{ name: "Dashboard", path: "/admin-portal" }];
+  const adminLinks = [{ name: "Admin Portal", path: "/admin-portal" }];
 
   let activeLinks = [...commonLinks];
-  if (isAuthenticated) {
-    if (userRole === "doctor") activeLinks.splice(1, 0, ...doctorLinks);
-    else if (userRole === "admin") activeLinks.unshift(...adminLinks);
+  if (user) {
+    if (user.role === "doctor") activeLinks.splice(1, 0, ...doctorLinks);
+    else if (user.role === "admin") activeLinks.unshift(...adminLinks);
     else activeLinks.splice(1, 0, ...userLinks);
   }
 
@@ -87,7 +66,6 @@ const Navbar = () => {
       )}
     >
       <div className="container-custom flex items-center justify-between">
-        {/* Logo */}
         <Link
           to="/"
           className="flex items-center gap-2 text-3xl font-bold no-underline"
@@ -99,7 +77,6 @@ const Navbar = () => {
           />
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-10">
           {activeLinks.map((link) => (
             <Link
@@ -117,19 +94,17 @@ const Navbar = () => {
           ))}
         </nav>
 
-        {/* Desktop Actions */}
         <div className="hidden lg:flex items-center gap-4">
-          {isAuthenticated ? (
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <div className="flex items-center gap-2 cursor-pointer p-2 text-gray-700 hover:text-black">
                   <UserCircle size={20} />
-                  <span className="text-sm font-medium">{userName}</span>
+                  <span className="text-sm font-medium">{user.name}</span>
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Only show "My Profile" for users */}
-                {userRole === "user" && (
+                {user.role === "user" && (
                   <DropdownMenuItem onClick={() => navigate("/my-profile")}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     My Profile
@@ -153,7 +128,6 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Navigation */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <button className="lg:hidden text-gray-700 hover:text-black">
@@ -180,10 +154,9 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              {isAuthenticated ? (
+              {user ? (
                 <>
-                  {/* Only show "My Profile" for users */}
-                  {userRole === "user" && (
+                  {user.role === "user" && (
                     <Link
                       to="/my-profile"
                       onClick={() => setIsOpen(false)}
